@@ -9,14 +9,15 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip build-essential libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev openjdk-17-jdk
+          sudo apt-get install -y python3-pip build-essential libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev openjdk-17-jdk ant
           pip3 install --user --upgrade buildozer cython virtualenv
 
       - name: Build with Buildozer
         run: |
           export PATH=$PATH:$HOME/.local/bin
-          # الأمر ده بيوافق على كل شروط أندرويد أوتوماتيك
-          yes | buildozer android debug
+          # ده السطر السحري اللي بيعدي كل شروط أندرويد
+          yes | buildozer android debug || true
+          buildozer android debug
         
       - name: Upload APK
         uses: actions/upload-artifact@v4
