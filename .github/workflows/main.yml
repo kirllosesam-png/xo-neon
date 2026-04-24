@@ -20,14 +20,13 @@ jobs:
       - name: Build with Buildozer
         run: |
           export PATH=$PATH:$HOME/.local/bin
-          # مسح الفولدر القديم عشان نضمن النظافة
           rm -rf .buildozer
-          # بنوافق على كل حاجة وبنبني
+          # بنجبره يوافق على رخص الأندرويد يدوياً
           yes | buildozer android debug
         
       - name: Upload APK
-        uses: actions/upload-artifact@v3  # رجعنا لنسخة 3 المستقرة جداً
+        uses: actions/upload-artifact@v3
         with:
-          name: XO-Neon-APK
+          name: XO-Neon-Final
           path: bin/*.apk
           
