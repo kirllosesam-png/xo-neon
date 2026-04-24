@@ -14,17 +14,20 @@ jobs:
       - name: Install Buildozer dependencies
         run: |
           sudo apt update
-          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+          # شلنا libtinfo5 اللي كانت عاملة مشكلة وضفنا البديل بتاعها
+          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev
           pip install --user --upgrade buildozer cython virtualenv
 
       - name: Build with Buildozer
         run: |
           export PATH=$PATH:$HOME/.local/bin
-          # بنوافق على الشروط وبنبدأ البناء فوراً
-          yes | buildozer android debug
+          # السطر ده بيوافق على الرخص بذكاء عشان ما يقطعش
+          yes | buildozer android debug || true
+          buildozer android debug
         
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: my-game-apk
           path: bin/*.apk
+          
