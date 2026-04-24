@@ -15,9 +15,10 @@ jobs:
       - name: Build with Buildozer
         run: |
           export PATH=$PATH:$HOME/.local/bin
-          # ده السطر السحري اللي بيعدي كل شروط أندرويد
+          # السطر ده بيجبره يوافق على كل حاجة قبل ما يبدأ
           yes | buildozer android debug || true
-          buildozer android debug
+          # السطر ده بيخليه يبني ويورينا "الفرفورة" وهو شغال عشان لو وقف نعرف فين
+          buildozer -v android debug
         
       - name: Upload APK
         uses: actions/upload-artifact@v4
