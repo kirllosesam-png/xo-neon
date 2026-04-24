@@ -6,18 +6,23 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 version = 0.1
 
-# المتطلبات اللي بيحتاجها Kivy دايماً
+# المتطلبات اللي بتنجح دايماً
 requirements = python3,kivy==2.3.0,requests
 
-# إعدادات الأندرويد اللي المطورين بيثبتوها
-android.api = 33
+orientation = portrait
+fullscreen = 0
+android.permissions = INTERNET
+
+# الزتونة هنا (إعدادات الـ Toolchain الصح)
+android.api = 31
 android.minapi = 21
 android.ndk = 25b
-android.archs = arm64-v8a
+android.ndk_path = 
+android.sdk_path = 
 android.accept_sdk_license = True
 
-# دي عشان الصور والملفات تظهر صح في التطبيق
-android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+# حددنا نوع المعالج بالظبط عشان ما يقعدش يدور
+android.archs = arm64-v8a
 
 [buildozer]
 log_level = 2
