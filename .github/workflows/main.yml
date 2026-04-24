@@ -20,9 +20,8 @@ jobs:
       - name: Build with Buildozer
         run: |
           export PATH=$PATH:$HOME/.local/bin
-          # سطر السحر: تنظيف أي بواقي قديمة وزيادة الصلاحيات
-          buildozer android clean
-          chmod -R 777 .
+          # شلنا الـ clean وحطينا أمر يمسح أي فولدر قديم يدوي
+          rm -rf .buildozer
           yes | buildozer android debug
         
       - name: Upload APK
@@ -30,4 +29,3 @@ jobs:
         with:
           name: my-game-apk
           path: bin/*.apk
-          
