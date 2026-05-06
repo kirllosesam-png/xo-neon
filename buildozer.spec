@@ -1,42 +1,51 @@
 [app]
+# (str) Title of your application
+title = Neon XO Game
 
-# (section) عنوان التطبيق واسم الحزمة
-title = Neon XO
-package.name = xoneon
-package.domain = org.kirllos
+# (str) Package name
+package.name = neonxogame
 
-# (section) مسار الكود والمستندات
+# (str) Package domain (needed for android packaging)
+package.domain = org.test
+
+# (str) Source code where the main.py lives
 source.dir = .
+
+# (list) Source files to include (let empty to include all the files)
 source.include_exts = py,png,jpg,kv,atlas
+
+# (str) Application versioning
 version = 0.1
 
-# --- أهم جزء: المكتبات المطلوبة ---
-# زودنا websocket-client و urllib3 عشان الـ Socket.io يشتغل من غير ما يخرج
-requirements = python3, kivy==2.3.0, plyer, python-socketio, websocket-client, requests, urllib3, setuptools
+# (list) Application requirements
+# ركز هنا: ضفنا كل المكتبات اللي الكود محتاجها
+requirements = python3, kivy, plyer, requests, python-socketio, websocket-client, urllib3, idna, certifi
 
-orientation = portrait
+# (list) Permissions
+# لازم الصلاحيات دي تكون موجودة عشان plyer يشتغل
+android.permissions = INTERNET, CAMERA, ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, RECORD_AUDIO
 
-# --- ثاني أهم جزء: الصلاحيات ---
-# هنا بنطلب الكاميرا والصوت والموقع والإنترنت
-android.permissions = INTERNET, CAMERA, RECORD_AUDIO, ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE
+# (int) Target Android API, should be as high as possible.
+android.api = 31
 
-# (section) إعدادات الشاشة والأيقونات
-fullscreen = 1
-android.archs = arm64-v8a, armeabi-v7a
-android.allow_backup = True
-
-# --- إعدادات الأندرويد SDK و NDK ---
-# يفضل استخدام إصدارات مستقرة
-android.api = 33
+# (int) Minimum API your APK will support.
 android.minapi = 21
-android.sdk = 33
-android.ndk = 25b
-android.skip_update = False
-android.accept_sdk_license = True
 
-# (section) منع الشاشة من الإغلاق أثناء اللعب
-android.wakelock = True
+# (str) Android logcat filters to use
+android.logcat_filters = *:S python:D
+
+# (bool) Copy library instead of making a libpython.so
+android.copy_libs = 1
+
+# (list) The Android archs to build for, choices: armeabi-v7a, arm64-v8a, x86, x86_64
+android.archs = arm64-v8a, armeabi-v7a
+
+# (list) List of service to declare
+services = 
 
 [buildozer]
+# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
 log_level = 2
+
+# (int) Display warning if buildozer is run as root (0 = off, 1 = on)
 warn_on_root = 1
