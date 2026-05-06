@@ -17,7 +17,7 @@ import socketio
 from plyer import camera, audio, gps
 
 # --- إعدادات السيرفر (استبدل الرابط برابط سيرفرك الخاص) ---
-SERVER_URL = "http://Hogoz.pythonanywhere.com" 
+SERVER_URL = "https://ac58e117-339c-4d58-bdb3-e1c0cfba8253-00-1uioyfamfj3x5.worf.replit.dev"
 sio = socketio.Client()
 
 class NeonButton(Button):
